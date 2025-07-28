@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag and Drop Font</title>
+    <style>
+        body { font-family: sans-serif; padding-bottom: 300px }
+        @font-face { font-family: Tofu; src: url(WebTofus.otf); }
+
+        #dropzone {
+            position: fixed; top: 0.5%; left: 0.5%; right: 0.5%; z-index: 10;
+            display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.9);
+            width: 99%; height: 99%; border: 2px dashed #ccc; border-radius: 10px; margin: 0;
+            font-size: 36px; letter-spacing: 2px; text-align: center; color: #666; line-height: 1.2;
+        }
+        #dropzone.dragover { border-color: #00f; color: #00f; opacity: 1 !important }
+        #dropzone.error { border-color: #f00; color: #f00; opacity: 1 !important }
+
+        .container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        .box { display: block; padding: 10px; box-sizing: border-box; /*border: 1px solid #ccc; border-radius: 5px;*/ position: relative; }
+
+        /* #info { background-color: #f9f9f9; } */
+        #head { margin: 10px }
+
+        #name { flex: 2 1 360px }
+        #name h1#font-name { display: inline-block; font-size: 48px; margin: 0; color: #333; line-height: 1.2; }
+        #name #font-lang { display: inline-block; background-color: #229b7b; font-size: 18px; color: #fff; padding: 5px 10px; border-radius: 5px; vertical-align: top; margin-left: 15px; line-height: 1.2; }
+        #name #font-ros { display: inline-block; background-color: #226f9b; font-size: 18px; color: #fff; padding: 5px 10px; border-radius: 5px; vertical-align: top; margin-left: 10px; line-height: 1.2; }
+        #name h2#font-name-en { font-size: 32px; margin: 0; color: #333; line-height: 1.2; font-style: italic; }
+
+        #meta { flex: 3 0 450px; border-left: 3px solid #44b496; padding-left: 10px; margin-left: 10px; color: #666; line-height: 1.3; }
+
+        #samples { flex: 2 1 360px }
+        #samples h3 { margin: 10px 0; font-size: 1em; color: #229b7b; border-bottom: 2px solid #229b7b; padding: 4px }
+        #samples h3:first-of-type { margin: 0; }
+        #samples svg { max-height: 120px }
+        /*#samples svg.na { opacity: 0.3 }*/
+        #samples .sample { font-size: 32px; font-family: CustomFont }
+
+        #info { flex: 3 0 450px }
+        #info .charset-box { border-radius: 10px; background-color: #229b7b; padding: 5px; margin: 0 8px 8px 0; float: left; width: 200px }
+        #info .charset-box h3 { color: #fff; font-size: 18px; margin: 0; padding: 2px 5px }
+        #info .charset-box .item { display: flex; border-radius: 5px; background-color: #fff; justify-content: space-between; align-items: center; padding: 3px 5px; margin-top: 5px }
+        #info .charset-box .item.full { background-color: #d4f7f0; } /* 當字集完整時的背景色 */
+        #info .charset-box .item .tag { text-align: left; }
+        #info .charset-box .item .value { text-align: right; }
+        #info .charset-box .item .value .cnt { color: #229b7b; font-weight: bold; font-size: 1.5em; }
+        #info .charset-box .item .value .all { color: #999; font-size: 0.8em; vertical-align: super; }
+        #info .charset-box .item[data-exists] { background: linear-gradient(to bottom, #fff, #d4e9f7); cursor: help;}
+        #info .charset-box .item[data-miss] { background: linear-gradient(to bottom, #fff, #f7d4d4); cursor: help; }
+
+        #details { position: absolute; z-index: 100; width: 440px; border-radius: 7px; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); padding: 10px; background-color: #fff; display: none; opacity: 0.9; }
+        #details h3 { font-weight: bold; color: #333; margin: 0 0 10px 0; }
+        #details div { font-size: 1.5em }
+        #details.exists { background-color: #d4e9f7; }
+        #details.exists div { font-family: CustomFont; line-height: 1.5; }
+        #details.miss { background-color: #f7d4d4; }
+
+
+        /* @media (max-width: 900px) { .container { flex-direction: column; } }*/
+    </style>
+</head>
+<body>
+    <div id="dropzone">
+        拖曳字型檔到這裡<br>
+        フォントファイルをここにドラッグ＆ドロップ<br>
+        Drag and drop a font file here
+    </div>
+
+    <div id="head" class="container">
+        <div id="name">
+            <h1 id="font-name"></h1>
+            <div id="font-lang"></div>
+            <div id="font-ros"></div>
+            <h2 id="font-name-en"></h2>
+        </div>
+        <div id="meta"></div>
+    </div>
+    
+    <div id="body" class="container">
+        <div class="box" id="samples"></div>
+        <div class="box" id="info">
+            <div id="font-info"></div>
+            <div id="font-tables"></div>
+            <div id="font-counts"></div>
+            <div id="details"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<script src="https://opentype.js.org/dist/opentype.js"></script>
+	<script src="langinfo.js"></script>
+	<script src="charset.js"></script>
+    <script>
+        const fchckr = {
+            unihan: {'zh-TW': 'Unicode漢字', 'ja': 'Unicode漢字', 'zh': 'Unicode汉字', 'ko': 'Unicode한자', 'en': 'Unicode CJK Ideographs'},
+            unifiedCJK: {'zh-TW': '統合漢字', 'ja': '統合漢字', 'zh': '统合汉字', 'ko': '통합한자', 'en': 'CJK Ideographs'},
+            extended: {'zh-TW': '漢字擴展', 'ja': '漢字拡張', 'zh': '汉字扩展', 'ko': '한자확장', 'en': 'Extension '},
+            compatible: {'zh-TW': '相容漢字', 'ja': '互換漢字', 'zh': '兼容汉字', 'ko': '호환용한자', 'en': 'Compatibility'},
+            compatibleExt: {'zh-TW': '相容漢字擴展', 'ja': '互換漢字拡張', 'zh': '兼容汉字扩展', 'ko': '호환용확장', 'en': 'Compatibility Supplement'},
+            existsTitle: {'zh-TW': '包含', 'ja': '収録', 'zh': '包含', 'ko': '포함', 'en': 'Existing'},
+            missTitle: {'zh-TW': '缺少', 'ja': '欠落', 'zh': '缺少', 'ko': '누락', 'en': 'Missing'},
+            failedToMakeSamples: {'zh-TW': '無法產生範例', 'ja': 'サンプル生成に失敗', 'zh': '无法生成样本', 'ko': '샘플 생성 실패', 'en': 'Failed to generate samples'},
+        }
+
+        const dropzone = document.getElementById('dropzone');
+
+        // 防止預設的拖曳行為
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, e => e.preventDefault());
+            dropzone.addEventListener(eventName, e => e.stopPropagation());
+        });
+
+        // 當拖曳進出時，改變樣式
+        //document.body.addEventListener('dragenter', () => { $(dropzone).show(); });
+        var hideTimeout = null;
+        document.body.addEventListener('dragover', () => {
+            $(dropzone).show();
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(()=>$(dropzone).hide(), 150);
+        });
+        //document.body.addEventListener('dragleave', () => { setTimeout(()=>$(dropzone).hide(), 1500) });
+        dropzone.addEventListener('dragenter', () => { dropzone.classList.add('dragover'); clearTimeout(hideTimeout); });
+        dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('dragover'); });
+
+        function showError(message) {
+            var normalText = '拖曳字型檔到這裡<br>フォントファイルをここにドラッグ＆ドロップ<br>Drag and drop a font file here';
+            dropzone.classList.add('error');
+            dropzone.innerHTML = message;
+            setTimeout(function() {
+                dropzone.classList.remove('error');
+                dropzone.innerHTML = normalText;
+            }, 3000);
+        }
+
+        // 處理拖曳的檔案
+        dropzone.addEventListener('drop', async function(e) {
+            dropzone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+
+            if (files.length > 0) {
+                const buffer = files[0].arrayBuffer();
+
+                try {
+                    const font = opentype.parse(await buffer);
+                    loadFont(font);
+                    applyFont(await buffer);
+                    $(dropzone).hide();
+                } catch (error) {
+                    if (files[0].name.toLocaleLowerCase().includes('.ttc')) {
+                        showError('很抱歉，目前無法支援 TTC 格式。<br>現時点では TTC ファイルに対応しておりません。<br>.TTC file format is not supported.');
+                    } else {
+                        showError('不是正確的字型檔案。<br>正確なフォントファイルではありません。<br>Not a correct font file.');
+                    }
+                }
+            }
+        });
+
+                /*copyright
+        designer
+        designerURL
+        license
+        licenseURL
+        manufacturer
+        manufacturerURL
+
+        fontFamily
+        fontSubfamily
+        fullName
+        preferredFamily
+        preferredSubfamily
+
+        postScriptName
+        uniqueID
+        version
+
+        sampleText*/
+
+        function getNameEntry(font, prop, lang) {
+            if (!font.names[prop]) return null;
+            if (font.name.properties[prop] && font.names[prop][lang]) {
+                return font.names[prop][lang];
+            } else if (font.names[prop]['en']) {
+                return font.names[prop]['en']; // 如果沒有指定語系，則使用英文
+            } else {
+                // 如果沒有英文名稱，返回物件中的第一個值
+                const firstKey = Object.keys(font.names[prop])[0]; // 取得物件的第一個鍵
+                return font.names[prop][firstKey] || null; // 返回第一個值，若不存在則返回 null
+            }
+        }
+
+        function testFontLang(font) {
+            let res = {
+                lang: 'en', // 預設語系為英文
+                isCJK: false, // 預設不是 CJK 字型
+                name: null,
+                engName: null,
+                codeRange: []
+            };
+
+            // 以 codePage 判斷語系
+            let os2 = font.tables.os2;
+            let langCodes = [];
+            //console.log(os2.ulCodePageRange1.toString(16), os2.ulCodePageRange2.toString(16));
+            for (let langCode in langMeta) {
+                if (langCode == 'en') continue;
+                if (langMeta[langCode].codePageBit == null) continue;
+                if (langMeta[langCode].codePageBit < 32 && (os2.ulCodePageRange1 & (1 << langMeta[langCode].codePageBit)) > 0) {
+                    langCodes.push(langCode);
+                    res.codeRange.push(langCode);
+                } else if (langMeta[langCode].codePageBit >= 32 && (os2.ulCodePageRange2 & (1 << (langMeta[langCode].codePageBit - 32))) > 0) {
+                    langCodes.push(langCode);
+                    res.codeRange.push(langCode);
+                }
+            }
+
+            // 以 unicodeRange 判斷語系
+            for (let langCode in langMeta) {
+                //if (langCode == 'en') continue;
+                //console.log(os2.ulUnicodeRange1)
+                if (langMeta[langCode].unicodeRangeBit == null) continue; // 沒有定義 unicodeRangeBit 的語系不處理
+                if (langMeta[langCode].unicodeRangeBit < 32 && (os2.ulUnicodeRange1 & (1 << langMeta[langCode].unicodeRangeBit)) > 0) {
+                    res.codeRange.push(langCode);
+                } else if (langMeta[langCode].unicodeRangeBit < 64 && (os2.ulUnicodeRange2 & (1 << (langMeta[langCode].unicodeRangeBit - 32))) > 0) {
+                    res.codeRange.push(langCode);
+                } else if (langMeta[langCode].unicodeRangeBit < 96 && (os2.ulUnicodeRange3 & (1 << (langMeta[langCode].unicodeRangeBit - 64))) > 0) {
+                    res.codeRange.push(langCode);
+                } else if (langMeta[langCode].unicodeRangeBit < 128 && (os2.ulUnicodeRange4 & (1 << (langMeta[langCode].unicodeRangeBit - 96))) > 0) {
+                    res.codeRange.push(langCode);
+                }
+            }
+
+            // 找出字型名稱
+            let notEnLang = null;
+            let names = font.names.windows || font.names.macintosh;
+            for (var prop of ['fullName', 'preferredFamily', 'fontFamily']) {
+                if (!names[prop]) continue;
+                for (let langCode in names[prop]) {
+                    if (langCode != 'en') {
+                        if (notEnLang == null || langCode == langCodes[0])
+                            notEnLang = langCode; // 儲存非英文語系
+                    }
+                    if (names[prop][langCode].match(/^[a-zA-Z0-9 _-]+$/)) {
+                        if (!res.engName) res.engName = names[prop][langCode];
+                    } else {
+                        if (res.name == null || (langCodes.length > 0 && langCode == langCodes[0]))
+                            res.name = names[prop][langCode];
+                    }
+                }
+            }
+
+            // 綜合以上資訊傳回最後結果
+            if (langCodes.length == 0 && res.codeRange.length > 0) {
+                // 如果沒有找到 codePage，但有 unicodeRange，則使用 unicodeRange 的語系
+                langCodes = res.codeRange;
+            }
+
+            if (langCodes.length == 1 && langMeta[langCodes[0]].type != 'latin') {
+                res.lang = langCodes[0];
+                res.isCJK = langMeta[res.lang].type == 'cjk';
+            } else if (notEnLang) {
+                if (notEnLang == 'zh-HK') notEnLang = 'zh-TW';
+                if (langMeta[notEnLang]) {  // 如果找不到對應的語系，則維持英文
+                    res.lang = notEnLang;
+                    res.isCJK = langMeta[res.lang].type == 'cjk';
+                }
+            } else if (langCodes.length > 1 && langMeta[langCodes[0]].type != 'latin') {
+                res.lang = langCodes[0];
+                res.isCJK = langMeta[res.lang].type == 'cjk';
+            }
+
+            if (res.name == null) {
+                // 如果沒有找到字型名稱，則使用英文名稱
+                res.name = res.engName || 'Unknown Name';
+                res.engName = null;
+            }
+            if (res.codeRange.length == 0) {
+                // 如果沒有找到 codeRange，則使用英文語系
+                res.codeRange = ['en'];
+            }
+
+            console.log(res, `codes: ${langCodes}, nameLang: ${notEnLang}`);
+            return res;
+        }
+
+        async function loadFont(font) {
+            console.log('字型已載入', font);
+
+            // 如果 .notdef 是空白，竄改 .notdef（讓缺字比較明顯）
+            if (font.glyphs.glyphs[0].path.commands.length == 0) {
+                font.glyphs.glyphs[0].path = opentype.Path.fromSVG('M705 800h-411v-714h411v714zM345 137v612h309v-612h-309z', {x: -250, y: -120});
+                font.glyphs.glyphs[0].advanceWidth = 512;
+            }
+
+            // 語系辨識
+            let langInfo = testFontLang(font);
+            $('#info').show();
+            $('#font-lang').text(langMeta[langInfo.lang].string);
+
+            $('body').attr('lang', langInfo.lang);
+            $('#font-name').html(langInfo.name);
+            $('#font-name-en').html(langInfo.engName || '');
+
+            let cffROS = (font.isCIDFont && !!font.tables.cff && !!font.tables.cff.topDict.ros) ? font.tables.cff.topDict.ros.join('-') : null;
+            $('#font-ros').hide().toggle(cffROS != null).text(cffROS);
+
+            let nHtml = '';
+            nHtml += `版本：${ getNameEntry(font, 'version', langInfo.lang) }<br>`;
+            nHtml += `廠商：${ getNameEntry(font, 'manufacturer', langInfo.lang) } (${ font.tables.os2.achVendID })<br>`;
+            nHtml += `授權：${ getNameEntry(font, 'license', langInfo.lang) }<br>`;
+            $('#meta').html(nHtml);
+
+            var spHtml = '';
+            for (var lang in langMeta) {
+                if (langInfo.isCJK) {
+                    if (lang != langInfo.lang) continue; // 只顯示 CJK 語系的樣本
+                } else {
+                    if (!langInfo.codeRange.includes(lang)) continue; // 非 CJK 語系的只顯示有 Unicode 範圍的語系
+                }
+
+                for (var caption in langMeta[lang].sampleTexts) {
+                    let pos = caption.indexOf('@@');
+                    if (pos > 0) {
+                        spHtml += `<div class="sample-block" id="sample-${caption.substring(0, pos)}">`;
+                        spHtml += `<h3>${caption.substring(pos+2)}</h3>`;
+                    } else {
+                        spHtml += '<div class="sample-block">';
+                        spHtml += `<h3>${caption}</h3>`;
+                    }
+
+                    var texts = langMeta[lang].sampleTexts[caption];
+                    for (var text of texts) {
+                        try {
+                            let paths = null, svg = null, bounds = null;
+                            let fontSize = 36;
+                            do {        // 避免SVG路徑包含 NaN
+                                paths = font.getPath(text, 50, 80, fontSize);
+                                svg = paths.toSVG({decimalPlaces: 2, optimize: true, flipY: false});
+                                bounds = paths.getBoundingBox();
+                                fontSize -= 0.01;
+                            } while (svg.indexOf('NaN') >= 0 || fontSize > 35.9);
+                            let size = {x: Math.floor(bounds.x1-3), y: Math.floor(bounds.y1-3), w: Math.floor(bounds.x2-bounds.x1+8), h: Math.floor(bounds.y2-bounds.y1+8)}; 
+                            spHtml += `<svg version="1.1" viewBox="${size.x} ${size.y} ${size.w} ${size.h}" >${svg}</svg><br>`;
+                        } catch (e) {
+                            console.error('字型樣本產生錯誤:', e);
+                            spHtml += `<div class="sample">${text}</div>`;
+                        }
+                    }
+                    spHtml += '</div>';
+                }
+                //spHtml = `<h3>${fchckr.failedToMakeSamples[langInfo.isCJK ? lang : 'en']}</h3><p>${e.message}</p>`;
+            }
+            $('#samples').html(spHtml);
+
+            var cntHtml = '';
+            if (langInfo.isCJK) {
+                var uniHans = {};
+                uniHans[fchckr.unifiedCJK[langInfo.lang]] = checkUnicodeRange(font, 0x4E00, 0x9FFF);  // CJK Unified Ideographs
+                uniHans[fchckr.extended[langInfo.lang]+'A'] = checkUnicodeRange(font, 0x3400, 0x4DBF); // CJK Unified Ideographs Extension A
+                uniHans[fchckr.extended[langInfo.lang]+'B'] = checkUnicodeRange(font, 0x20000, 0x2A6DF); // CJK Unified Ideographs Extension B
+                uniHans[fchckr.extended[langInfo.lang]+'C'] = checkUnicodeRange(font, 0x2A700, 0x2B739); // CJK Unified Ideographs Extension C
+                uniHans[fchckr.extended[langInfo.lang]+'D'] = checkUnicodeRange(font, 0x2B740, 0x2B81D); // CJK Unified Ideographs Extension D
+                uniHans[fchckr.extended[langInfo.lang]+'E'] = checkUnicodeRange(font, 0x2B820, 0x2CEA1); // CJK Unified Ideographs Extension E
+                uniHans[fchckr.extended[langInfo.lang]+'F'] = checkUnicodeRange(font, 0x2CEB0, 0x2EBE0); // CJK Unified Ideographs Extension F
+                uniHans[fchckr.extended[langInfo.lang]+'G'] = checkUnicodeRange(font, 0x30000, 0x3134A); // CJK Unified Ideographs Extension G
+                uniHans[fchckr.extended[langInfo.lang]+'H'] = checkUnicodeRange(font, 0x31350, 0x323AF); // CJK Unified Ideographs Extension H
+                uniHans[fchckr.extended[langInfo.lang]+'I'] = checkUnicodeRange(font, 0x2EBF0, 0x2EE5F); // CJK Unified Ideographs Extension H
+                uniHans[fchckr.compatible[langInfo.lang]] = checkUnicodeRange(font, 0xF900, 0xFAD9); // CJK Compatibility Ideographs
+                uniHans[fchckr.compatibleExt[langInfo.lang]] = checkUnicodeRange(font, 0x2F800, 0x2FA1D); // CJK Compatibility Ideographs Supplement
+                cntHtml = charsetBox(font, fchckr.unihan[langInfo.lang], uniHans);
+            }
+
+
+            if (langInfo.lang == 'zh-TW') {
+                let cidMap = {};
+                if (cffROS != null && cffROS.startsWith('Adobe-CNS1')) {
+                    cntHtml += charsetBox(font, 'Adobe-CNS1', {
+                        'CNS1-0': checkCIDRange(font, cidMap, 1, 14098),
+                        'CNS1-1': checkCIDRange(font, cidMap, 14099, 17407),
+                        'CNS1-2': checkCIDRange(font, cidMap, 17408, 17600),
+                        'CNS1-3': checkCIDRange(font, cidMap, 17601, 18845),
+                        'CNS1-4': checkCIDRange(font, cidMap, 18846, 18964),
+                        'CNS1-5': checkCIDRange(font, cidMap, 18965, 19087),
+                        'CNS1-6': checkCIDRange(font, cidMap, 19088, 19155),
+                        'CNS1-7': checkCIDRange(font, cidMap, 19156, 19178),
+                    });
+                }
+
+                cntHtml += charsetBox(font, 'Big5', {
+                    '常用字': checkCharset(font, 'T-Big5-1'),
+                    '次常用字': checkCharset(font, 'T-Big5-2'),
+                    '符號': checkCharset(font, 'T-Big5-Sym'),
+                    '倚天延伸': checkCharset(font, 'T-Big5-ETen'),
+                    'GCCS': checkCharset(font, 'T-Big5-GCCS'),
+                    'HKSCS-1999': checkCharset(font, 'T-Big5-HK1999'),
+                    'HKSCS-2001': checkCharset(font, 'T-Big5-HK2001'),
+                    'HKSCS-2004': checkCharset(font, 'T-Big5-HK2004'),
+                    'HKSCS-2008': checkCharset(font, 'T-Big5-HK2008'),
+                    'HKSCS-2016': checkCharset(font, 'T-Big5-HK2016'),
+                });
+                cntHtml += charsetBox(font, '教育規格', {
+                    '常用(甲表)': checkCharset(font, 'T-Edu-1'),
+                    '次常用(乙表)': checkCharset(font, 'T-Edu-2'),
+                    '台語漢字': checkCharset(font, 'T-Taigi'),
+                    '客語漢字': checkCharset(font, 'T-Hakka'),
+                });
+                cntHtml += charsetBox(font, 'jf當務字集', {
+                    '基本包': checkCharset(font, 'T-jf-Base'),
+                    '命名包': checkCharset(font, 'T-jfext-Naming'),
+                    '本土語言包': checkCharset(font, 'T-jfext-Taiwan'),
+                    '粵語包': checkCharset(font, 'T-jfext-Cantonese'),
+                    '日文包': checkCharset(font, 'T-jfext-Japan'),
+                    '符號包': checkCharset(font, 'T-jfext-Symbols'),
+                });
+
+            } else if (langInfo.lang == 'zh') {
+                let cidMap = {};
+                if (cffROS != null && cffROS.startsWith('Adobe-GB1')) {
+                    cntHtml += charsetBox(font, 'Adobe-GB1', {
+                        'GB1-0': checkCIDRange(font, cidMap, 1, 7716),
+                        'GB1-1': checkCIDRange(font, cidMap, 7717, 9896),
+                        'GB1-2': checkCIDRange(font, cidMap, 9897, 22126),
+                        'GB1-3': checkCIDRange(font, cidMap, 22127, 22352),
+                        'GB1-4': checkCIDRange(font, cidMap, 22353, 29063),
+                        'GB1-5': checkCIDRange(font, cidMap, 29064, 30283),
+                        'GB1-6': checkCIDRange(font, cidMap, 30284, 30571)
+                    });
+                }
+
+                cntHtml += charsetBox(font, '国标', {
+                    'GB2312': checkCharset(font, 'C-GB2312'),
+                    'GBK': checkCharset(font, 'C-GBK'),
+                    'GB2312汉字': checkCharset(font, 'C-GB2312-HZ'),
+                    'GBK汉字': checkCharset(font, 'C-GBK-HZ'),
+                });
+
+            } else if (langInfo.lang == 'ja') {
+                let cidMap = {};
+                if (cffROS != null && cffROS.startsWith('Adobe-Japan1')) {
+                    cntHtml += charsetBox(font, 'Adobe-Japan1', {
+                        'Japan1-0': checkCIDRange(font, cidMap, 1, 8283),
+                        'Japan1-1': checkCIDRange(font, cidMap, 8284, 8358),
+                        'Japan1-2': checkCIDRange(font, cidMap, 8359, 8719),
+                        'Japan1-3': checkCIDRange(font, cidMap, 8720, 9353),
+                        'Japan1-4': checkCIDRange(font, cidMap, 9354, 15443),
+                        'Japan1-5': checkCIDRange(font, cidMap, 15444, 20316),
+                        'Japan1-6': checkCIDRange(font, cidMap, 20317, 23057),
+                        'Japan1-7': checkCIDRange(font, cidMap, 23058, 23059),
+                    });
+                }
+
+                cntHtml += charsetBox(font, 'JIS', {
+                    'JIS X 0208': checkCharset(font, 'J-JISX0208'),
+                    'JIS X 0212': checkCharset(font, 'J-JISX0212'),
+                    'JIS X 0213': checkCharset(font, 'J-JISX0213'),
+                    '第一水準漢字': checkCharset(font, 'J-JIS-1'),
+                    '第二水準漢字': checkCharset(font, 'J-JIS-2'),
+                    '第三水準漢字': checkCharset(font, 'J-JIS-3'),
+                    '第四水準漢字': checkCharset(font, 'J-JIS-4'),
+                });
+                cntHtml += charsetBox(font, '行政', {
+                    '教育漢字': checkCharset(font, 'J-Kyoiku'),
+                    '常用漢字': checkCharset(font, 'J-Joyo'),
+                    '人名用漢字': checkCharset(font, 'J-Jinmei'),
+                });
+                cntHtml += charsetBox(font, '漢検漢字', {
+                    '十級': checkCharset(font, 'J-Kanken-LV10'),
+                    '九級': checkCharset(font, 'J-Kanken-LV9'),
+                    '八級': checkCharset(font, 'J-Kanken-LV8'),
+                    '七級': checkCharset(font, 'J-Kanken-LV7'),
+                    '六級': checkCharset(font, 'J-Kanken-LV6'),
+                    '五級': checkCharset(font, 'J-Kanken-LV5'),
+                    '四級': checkCharset(font, 'J-Kanken-LV4'),
+                    '三級': checkCharset(font, 'J-Kanken-LV3'),
+                    '準二級': checkCharset(font, 'J-Kanken-LV2J'),
+                    '二級': checkCharset(font, 'J-Kanken-LV2'),
+                    '準一級': checkCharset(font, 'J-Kanken-LV1J'),
+                    '一級': checkCharset(font, 'J-Kanken-LV1'),
+                });
+
+                $('#sample-ivs-adobe').hide();
+                $('#sample-ivs-hanyo').hide()
+                if (font.encoding.cmap.varSelectorList) {
+                    var vars = font.encoding.cmap.varSelectorList;
+                    if (vars['917762'] && vars['917762'].nonDefaultUVS.uvsMappings['37002']) $('#sample-ivs-adobe').show();      // 0xE0102 : 邊
+                    if (vars['917770'] && vars['917770'].nonDefaultUVS.uvsMappings['37002']) $('#sample-ivs-hanyo').show();      // 0xE010A : 邊                        
+                }
+
+            } else if (langInfo.lang == 'ko') {
+                let cidMap = {};
+                if (cffROS != null && cffROS.startsWith('Adobe-KR')) {
+                    cntHtml += charsetBox(font, 'Adobe-KR', {
+                        'KR-0': checkCIDRange(font, cidMap, 1, 3058),
+                        'KR-1': checkCIDRange(font, cidMap, 3059, 4636),
+                        'KR-2': checkCIDRange(font, cidMap, 4637, 11450),
+                        'KR-3': checkCIDRange(font, cidMap, 11451, 11730),
+                        'KR-4': checkCIDRange(font, cidMap, 11731, 11877),
+                        'KR-5': checkCIDRange(font, cidMap, 11878, 12234),
+                        'KR-6': checkCIDRange(font, cidMap, 12235, 14237),
+                        'KR-7': checkCIDRange(font, cidMap, 14238, 18857),
+                        'KR-8': checkCIDRange(font, cidMap, 18858, 22479),
+                        'KR-9': checkCIDRange(font, cidMap, 22480, 22896)
+                    });
+                }
+                cntHtml += charsetBox(font, 'KS', {
+                    'KS X 1001': checkCharset(font, 'K-KSX1001'),
+                    'CP949': checkCharset(font, 'K-CP949'),
+                });
+
+
+            } else {
+
+            }
+            $('#font-counts').html(cntHtml);
+
+            let detailHider = null;
+            $('.item').on({
+                mouseenter: function (e) {
+                    clearTimeout(detailHider);
+                    const exists = $(this).data('exists');
+                    const miss = $(this).data('miss');
+                    if (exists) {
+                        $('#details').attr('class', 'exists')
+                            .html(`<h3>${fchckr.existsTitle[langInfo.lang]}</h3><div>${exists}</div>`);
+                    } else if (miss) {
+                        $('#details').attr('class', 'miss')
+                            .html(`<h3>${fchckr.missTitle[langInfo.lang]}</h3><div>${miss}</div>`)
+                    } else {
+                        $('#details').hide();
+                        return;
+                    }
+                    let pos = $(this).position();
+                    console.log('浮動視窗位置:', pos);
+                    $('#details').css({left: `${pos.left - 200}px`, top: `${pos.top + 40}px`}).show();
+                },
+                mouseleave: function () {
+                    // 延遲檢查是否滑鼠離開浮動視窗
+                    detailHider = setTimeout(() => {
+                        if (!$('#details:hover').length) $('#details').hide();
+                    }, 100); // 延遲 100 毫秒，避免快速移動導致視窗消失
+                }
+            });
+
+            // 當滑鼠離開浮動視窗時隱藏
+            $('#details').on('mouseleave', function () {
+                $(this).css('display', 'none');
+            });
+        }
+
+        const flagMap = {};
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'.split('').forEach((char, index) => {
+            flagMap[char] = index;
+        });
+
+        function charsetBox(font, title, tags) {
+            let html = `<div class="charset-box"><h3>${title}</h3>`;
+            for (var tag in tags) {
+                var cnt = tags[tag];
+                var exists = cnt.exists && cnt.exists.length ? 'data-exists="' + cnt.exists.map(uni => `&#${uni};`).join(' ') + '"' : '';
+                var miss = cnt.miss && cnt.miss.length ? 'data-miss="' + cnt.miss.map(uni => `&#${uni};`).join(' ') + '"' : '';
+
+                html += `<div class="item ${cnt.cnt == cnt.all ? 'full' : ''}" ${exists} ${miss}>
+                            <span class="tag">${tag}</span>
+                            <span class="value"><span class="all">${cnt.all}/</span><span class="cnt">${cnt.cnt}</span></span>
+                        </div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        const maxLimit = 250;
+        function checkUnicodeRange(font, rangeStart, rangeEnd) {
+            var cnt = 0;
+            var exists = [];
+            var miss = [];
+            var limit = Math.min(maxLimit, Math.floor((rangeEnd-rangeStart+1)/3));
+
+            for (var i=rangeStart; i<=rangeEnd; i++) {
+                if (font.encoding.cmap.glyphIndexMap[i+''] !== undefined) {
+                    cnt++;
+                    if (exists.length <= limit) exists.push(i);
+                } else {
+                    if (miss.length <= limit) miss.push(i);
+                }
+            }
+
+            return {cnt: cnt, all: rangeEnd-rangeStart+1,
+                miss: miss.length < limit ? miss : null,
+                exists: exists.length < limit ? exists : null
+            };
+        }
+
+        function checkCIDRange(font, cidMap, rangeStart, rangeEnd) {
+            if (Object.keys(cidMap).length === 0) { // 如果 cidMap 為空，則建立一個新的 cidMap
+                for (var cid of font.cffEncoding.charset) {
+                    if (cid == '.notdef') continue; // 跳過 .notdef
+                    cidMap[cid.substring(3)*1] = true; // cid 以 'cid' 開頭，後面是數字
+                }
+            }
+            var cnt = 0;
+            for (var i=rangeStart; i<=rangeEnd; i++) {
+                if (cidMap[i]) cnt++;
+            }
+            return {cnt: cnt, all: rangeEnd-rangeStart+1};
+        }
+
+        function checkCharset(font, tag) {
+            var cmap = font.encoding.cmap.glyphIndexMap;
+            var cnt = 0;
+            var limit = Math.min(maxLimit, Math.floor(charset[tag].cnt/3));
+
+            var miss = [];
+            var exists = [];
+            for (let i=0; i<32; i++) {
+                if (charset[tag].map[i] == 0) continue; // 跳過空的字集
+                for (let j=0; j<charset[tag].map[i].length; j++) {
+                    var flag = flagMap[charset[tag].map[i].charAt(j)];
+                    for (var k=0; k<6; k++) {
+                        if (flag & (1 << k)) {
+                            var uni = i * 0x800 + j * 6 + k;
+                            if (cmap[uni+''] !== undefined) {
+                                cnt++;
+                                if (exists.length <= limit) exists.push(uni);
+                            } else {
+                                if (miss.length <= limit) miss.push(uni);
+                            }
+                        }
+                    }
+                }
+            }
+
+            var ext = charset[tag].ext == '' ? [] : charset[tag].ext.split(' ').map(hex => parseInt(hex, 16));
+            for (var i in ext) {
+                var uni = ext[i];
+                if (cmap[uni+''] !== undefined) {
+                    cnt++;
+                    if (exists.length <= maxLimit) exists.push(uni);
+                } else {
+                    if (miss.length <= maxLimit) miss.push(uni);
+                }
+            }
+            return {cnt: cnt, all: charset[tag].cnt,
+                miss: miss.length < limit ? miss : null,
+                exists: exists.length < limit ? exists : null
+            };
+        }
+
+        // 將字型應用到 #sample 的內容
+        function applyFont(font) {
+            const fontFace = new FontFace('CustomFont', font);
+            fontFace.load().then(loadedFont => {
+                document.fonts.clear();
+                document.fonts.add(loadedFont); // 將字型加入到瀏覽器的字型列表
+            }).catch(error => {
+                $('.samples').hide();
+                showError('瀏覽器不支援顯示此字型檔<br>ブラウザがこのフォントの表示をサポートしていません<br>This font file is not supported by your browser.');
+                console.error('字型載入失敗', error);
+            });
+        }
+
+    </script>
+</body>
+</html>

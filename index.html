@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drag and Drop Font</title>
     <style>
-        body { font-family: sans-serif; padding-bottom: 300px }
+        @import url('https://fonts.googleapis.com/css2?family=Cabin+Condensed&display=swap');
+
+        body { font-family: sans-serif }
         @font-face { font-family: Tofu; src: url(WebTofus.otf); }
 
         #dropzone {
@@ -23,22 +25,35 @@
         /* #info { background-color: #f9f9f9; } */
         #head { margin: 10px }
 
-        #name { flex: 2 1 360px }
+        #name { flex: 2 1 440px }
         #name h1#font-name { display: inline-block; font-size: 48px; margin: 0; color: #333; line-height: 1.2; }
         #name #font-lang { display: inline-block; background-color: #229b7b; font-size: 18px; color: #fff; padding: 5px 10px; border-radius: 5px; vertical-align: top; margin-left: 15px; line-height: 1.2; }
         #name #font-ros { display: inline-block; background-color: #226f9b; font-size: 18px; color: #fff; padding: 5px 10px; border-radius: 5px; vertical-align: top; margin-left: 10px; line-height: 1.2; }
         #name h2#font-name-en { font-size: 32px; margin: 0; color: #333; line-height: 1.2; font-style: italic; }
 
-        #meta { flex: 3 0 450px; border-left: 3px solid #44b496; padding-left: 10px; margin-left: 10px; color: #666; line-height: 1.3; }
+        #meta { flex: 3 0 450px; border-left: 4px solid #44b496; padding-left: 50px; color: #666; line-height: 1.3; font-size: 0.85em }
+        #meta p { text-indent: -40px; margin: 0; font-family: "Cabin Condensed", sans-serif; font-weight: 400; font-style: normal; max-height: 3.2em; overflow-x: visible ; overflow-y: clip; position: relative; }
+        #meta p::after {
+            position: absolute; content: ''; top: 0; left: 0; width: 100%; height: 3.2em; pointer-events: none;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 2.5em, rgba(255, 255, 255, 1) 3.1em);
+        }
+        #meta em { font-weight: bold; font-style: normal; }
+        #meta a { text-decoration: none }
 
-        #samples { flex: 2 1 360px }
+        #samples { flex: 2 1 400px }
         #samples h3 { margin: 10px 0; font-size: 1em; color: #229b7b; border-bottom: 2px solid #229b7b; padding: 4px }
         #samples h3:first-of-type { margin: 0; }
         #samples svg { max-height: 120px }
-        /*#samples svg.na { opacity: 0.3 }*/
         #samples .sample { font-size: 32px; font-family: CustomFont }
 
+        #sampleSetting { display: none; position: absolute; cursor: pointer; font-size: 24px; z-index: 10; }
+
         #info { flex: 3 0 450px }
+
+        #info #font-features { margin: 10px 0 }
+        #info #font-features .fea { display: inline-block; border-radius: 3px; background-color: #44b496; padding: 3px 5px; color: #fff; margin: 0 5px 5px 0; font: 1.2em/1 monospace; }
+
+        #info #font-counts { padding-bottom: 300px }
         #info .charset-box { border-radius: 10px; background-color: #229b7b; padding: 5px; margin: 0 8px 8px 0; float: left; width: 200px }
         #info .charset-box h3 { color: #fff; font-size: 18px; margin: 0; padding: 2px 5px }
         #info .charset-box .item { display: flex; border-radius: 5px; background-color: #fff; justify-content: space-between; align-items: center; padding: 3px 5px; margin-top: 5px }
@@ -80,9 +95,9 @@
     
     <div id="body" class="container">
         <div class="box" id="samples"></div>
+        <div class="btn" id="sampleSetting">⚙️</div>
         <div class="box" id="info">
-            <div id="font-info"></div>
-            <div id="font-tables"></div>
+            <div id="font-features"></div>
             <div id="font-counts"></div>
             <div id="details"></div>
         </div>
@@ -93,17 +108,6 @@
 	<script src="langinfo.js"></script>
 	<script src="charset.js"></script>
     <script>
-        const fchckr = {
-            unihan: {'zh-TW': 'Unicode漢字', 'ja': 'Unicode漢字', 'zh': 'Unicode汉字', 'ko': 'Unicode한자', 'en': 'Unicode CJK Ideographs'},
-            unifiedCJK: {'zh-TW': '統合漢字', 'ja': '統合漢字', 'zh': '统合汉字', 'ko': '통합한자', 'en': 'CJK Ideographs'},
-            extended: {'zh-TW': '漢字擴展', 'ja': '漢字拡張', 'zh': '汉字扩展', 'ko': '한자확장', 'en': 'Extension '},
-            compatible: {'zh-TW': '相容漢字', 'ja': '互換漢字', 'zh': '兼容汉字', 'ko': '호환용한자', 'en': 'Compatibility'},
-            compatibleExt: {'zh-TW': '相容漢字擴展', 'ja': '互換漢字拡張', 'zh': '兼容汉字扩展', 'ko': '호환용확장', 'en': 'Compatibility Supplement'},
-            existsTitle: {'zh-TW': '包含', 'ja': '収録', 'zh': '包含', 'ko': '포함', 'en': 'Existing'},
-            missTitle: {'zh-TW': '缺少', 'ja': '欠落', 'zh': '缺少', 'ko': '누락', 'en': 'Missing'},
-            failedToMakeSamples: {'zh-TW': '無法產生範例', 'ja': 'サンプル生成に失敗', 'zh': '无法生成样本', 'ko': '샘플 생성 실패', 'en': 'Failed to generate samples'},
-        }
-
         const dropzone = document.getElementById('dropzone');
 
         // 防止預設的拖曳行為
@@ -157,37 +161,38 @@
             }
         });
 
-                /*copyright
-        designer
-        designerURL
-        license
-        licenseURL
-        manufacturer
-        manufacturerURL
+        let font = null;
+        let langInfo = null;
 
-        fontFamily
-        fontSubfamily
-        fullName
-        preferredFamily
-        preferredSubfamily
+        function ui(key) {
+            if (!fchckr[key]) return null;
+            if (langInfo && fchckr[key][langInfo.lang]) {
+                return fchckr[key][langInfo.lang];
+            } else {
+                return fchckr[key]['en']; // 如果沒有指定語系，則使用英文
+            }
+        }
 
-        postScriptName
-        uniqueID
-        version
+        function addNameEntry(prop, urlProp = null, postfix = '') {
+            let names = font.names.windows || font.names.macintosh || null;
+            if (names == null) return '';
+            if (!names[prop]) return '';
 
-        sampleText*/
+            let val = '';
+            if (names[urlProp] && names[urlProp].en) {
+                val += `<a href="${names[urlProp].en}" target="_blank" rel="noopener noreferrer">🔗</a> `;
+            }
 
-        function getNameEntry(font, prop, lang) {
-            if (!font.names[prop]) return null;
-            if (font.name.properties[prop] && font.names[prop][lang]) {
-                return font.names[prop][lang];
-            } else if (font.names[prop]['en']) {
-                return font.names[prop]['en']; // 如果沒有指定語系，則使用英文
+            if (names[prop] && names[prop][langInfo.lang]) {
+                val += names[prop][langInfo.lang];
+            } else if (names[prop]['en']) {
+                val += names[prop]['en']; // 如果沒有指定語系，則使用英文
             } else {
                 // 如果沒有英文名稱，返回物件中的第一個值
-                const firstKey = Object.keys(font.names[prop])[0]; // 取得物件的第一個鍵
-                return font.names[prop][firstKey] || null; // 返回第一個值，若不存在則返回 null
+                const firstKey = Object.keys(names[prop])[0]; // 取得物件的第一個鍵
+                val += names[prop][firstKey] || null; // 返回第一個值，若不存在則返回 null
             }
+            return `<p><em>${ui(prop)}</em>${val} ${postfix}</p>`;
         }
 
         function testFontLang(font) {
@@ -241,7 +246,7 @@
                         if (notEnLang == null || langCode == langCodes[0])
                             notEnLang = langCode; // 儲存非英文語系
                     }
-                    if (names[prop][langCode].match(/^[a-zA-Z0-9 _-]+$/)) {
+                    if (names[prop][langCode].match(/^[\x20-\x7e]+$/)) {
                         if (!res.engName) res.engName = names[prop][langCode];
                     } else {
                         if (res.name == null || (langCodes.length > 0 && langCode == langCodes[0]))
@@ -284,7 +289,8 @@
             return res;
         }
 
-        async function loadFont(font) {
+        async function loadFont(newFont) {
+            font = newFont;
             console.log('字型已載入', font);
 
             // 如果 .notdef 是空白，竄改 .notdef（讓缺字比較明顯）
@@ -294,7 +300,7 @@
             }
 
             // 語系辨識
-            let langInfo = testFontLang(font);
+            langInfo = testFontLang(font);
             $('#info').show();
             $('#font-lang').text(langMeta[langInfo.lang].string);
 
@@ -306,12 +312,47 @@
             $('#font-ros').hide().toggle(cffROS != null).text(cffROS);
 
             let nHtml = '';
-            nHtml += `版本：${ getNameEntry(font, 'version', langInfo.lang) }<br>`;
-            nHtml += `廠商：${ getNameEntry(font, 'manufacturer', langInfo.lang) } (${ font.tables.os2.achVendID })<br>`;
-            nHtml += `授權：${ getNameEntry(font, 'license', langInfo.lang) }<br>`;
+            nHtml += addNameEntry('version');
+            nHtml += addNameEntry('copyright');
+            nHtml += addNameEntry('manufacturer', 'manufacturerURL', `(${font.tables.os2.achVendID})`);
+            nHtml += addNameEntry('designer', 'designerURL');
+            nHtml += addNameEntry('license', 'licenseURL');
+            // nHtml += `<dt>${ui('version')}</dt><dd>${ getNameEntry(font, 'version', langInfo.lang) }</dd>`;
+            // nHtml += `<dt>${ui('vendor')}</dt><dd>${ getNameEntry(font, 'manufacturer', langInfo.lang) } (${ font.tables.os2.achVendID })<br>`;
+            // nHtml += `授權：${ getNameEntry(font, 'license', langInfo.lang) }<br>`;
             $('#meta').html(nHtml);
 
+            showSamples();
+
+            let features = {};
+            if (font.tables.gsub) {
+                for (let f of font.tables.gsub.features)
+                    features[f.tag] = `<span class="fea">${f.tag}</span>`;
+            } else if (font.tables.gpos) {
+                for (let f of font.tables.gpos.features)
+                    features[f.tag] = `<span class="fea">${f.tag}</span>`;
+            }
+            let featureList = Object.values(features);
+            $("#font-features").html(featureList.length > 0 ? featureList.join('') : '');
+
+            var cntHtml = '';
+            cntHtml += processCharsetBox_Unihan(langInfo.lang);
+            cntHtml += processCharsetBox_CID(cffROS);
+            cntHtml += processCharsetBox_Local(langInfo.lang);
+            $('#font-counts').html(cntHtml);
+            if (cntHtml != '') applyDetailPopup();
+        }
+
+        function showSamples() {
             var spHtml = '';
+            const savedText = localStorage.getItem('sampleText');
+            if (savedText) {
+                spHtml += '<div class="sample-block">';
+                spHtml += `<h3>${ui('customCaption')}</h3>`;
+                spHtml += genSampleSVGs([savedText]);
+                spHtml += '</div>';
+            }
+
             for (var lang in langMeta) {
                 if (langInfo.isCJK) {
                     if (lang != langInfo.lang) continue; // 只顯示 CJK 語系的樣本
@@ -329,154 +370,200 @@
                         spHtml += `<h3>${caption}</h3>`;
                     }
 
+                    spHtml += genSampleSVGs(langMeta[lang].sampleTexts[caption]);
+
                     var texts = langMeta[lang].sampleTexts[caption];
-                    for (var text of texts) {
-                        try {
-                            let paths = null, svg = null, bounds = null;
-                            let fontSize = 36;
-                            do {        // 避免SVG路徑包含 NaN
-                                paths = font.getPath(text, 50, 80, fontSize);
-                                svg = paths.toSVG({decimalPlaces: 2, optimize: true, flipY: false});
-                                bounds = paths.getBoundingBox();
-                                fontSize -= 0.01;
-                            } while (svg.indexOf('NaN') >= 0 || fontSize > 35.9);
-                            let size = {x: Math.floor(bounds.x1-3), y: Math.floor(bounds.y1-3), w: Math.floor(bounds.x2-bounds.x1+8), h: Math.floor(bounds.y2-bounds.y1+8)}; 
-                            spHtml += `<svg version="1.1" viewBox="${size.x} ${size.y} ${size.w} ${size.h}" >${svg}</svg><br>`;
-                        } catch (e) {
-                            console.error('字型樣本產生錯誤:', e);
-                            spHtml += `<div class="sample">${text}</div>`;
-                        }
-                    }
+                    // for (var text of texts) {
+                    //     try {
+                    //         let paths = null, svg = null, bounds = null;
+                    //         let fontSize = 36;
+                    //         do {        // 避免SVG路徑包含 NaN
+                    //             paths = font.getPath(text, 50, 80, fontSize);
+                    //             svg = paths.toSVG({decimalPlaces: 2, optimize: true, flipY: false});
+                    //             bounds = paths.getBoundingBox();
+                    //             fontSize -= 0.01;
+                    //         } while (svg.indexOf('NaN') >= 0 || fontSize > 35.9);
+                    //         let size = {x: Math.floor(bounds.x1-3), y: Math.floor(bounds.y1-3), w: Math.floor(bounds.x2-bounds.x1+8), h: Math.floor(bounds.y2-bounds.y1+8)}; 
+                    //         spHtml += `<svg version="1.1" viewBox="${size.x} ${size.y} ${size.w} ${size.h}" >${svg}</svg><br>`;
+                    //     } catch (e) {
+                    //         console.error('字型樣本產生錯誤:', e);
+                    //         spHtml += `<div class="sample">${text}</div>`;
+                    //     }
+                    // }
                     spHtml += '</div>';
                 }
                 //spHtml = `<h3>${fchckr.failedToMakeSamples[langInfo.isCJK ? lang : 'en']}</h3><p>${e.message}</p>`;
             }
             $('#samples').html(spHtml);
+        }
 
-            var cntHtml = '';
+        function genSampleSVGs(texts) {
+            let html = '';
+            for (var text of texts) {
+                try {
+                    let paths = null, svg = null, bounds = null;
+                    let fontSize = 36;
+                    do {        // 避免SVG路徑包含 NaN
+                        paths = font.getPath(text, 50, 80, fontSize);
+                        svg = paths.toSVG({decimalPlaces: 2, optimize: true, flipY: false});
+                        bounds = paths.getBoundingBox();
+                        fontSize -= 0.01;
+                    } while (svg.indexOf('NaN') >= 0 || fontSize > 35.9);
+                    let size = {x: Math.floor(bounds.x1-3), y: Math.floor(bounds.y1-3), w: Math.floor(bounds.x2-bounds.x1+8), h: Math.floor(bounds.y2-bounds.y1+8)}; 
+                    html += `<svg version="1.1" viewBox="${size.x} ${size.y} ${size.w} ${size.h}" >${svg}</svg><br>`;
+                } catch (e) {
+                    console.error('字型樣本產生錯誤:', e);
+                    html += `<div class="sample">${text}</div>`;
+                }
+            }
+            return html;
+        }
+
+        /* Count Box */
+        function processCharsetBox_Unihan(lang) {
+            let cntHtml = '';
+
             if (langInfo.isCJK) {
                 var uniHans = {};
-                uniHans[fchckr.unifiedCJK[langInfo.lang]] = checkUnicodeRange(font, 0x4E00, 0x9FFF);  // CJK Unified Ideographs
-                uniHans[fchckr.extended[langInfo.lang]+'A'] = checkUnicodeRange(font, 0x3400, 0x4DBF); // CJK Unified Ideographs Extension A
-                uniHans[fchckr.extended[langInfo.lang]+'B'] = checkUnicodeRange(font, 0x20000, 0x2A6DF); // CJK Unified Ideographs Extension B
-                uniHans[fchckr.extended[langInfo.lang]+'C'] = checkUnicodeRange(font, 0x2A700, 0x2B739); // CJK Unified Ideographs Extension C
-                uniHans[fchckr.extended[langInfo.lang]+'D'] = checkUnicodeRange(font, 0x2B740, 0x2B81D); // CJK Unified Ideographs Extension D
-                uniHans[fchckr.extended[langInfo.lang]+'E'] = checkUnicodeRange(font, 0x2B820, 0x2CEA1); // CJK Unified Ideographs Extension E
-                uniHans[fchckr.extended[langInfo.lang]+'F'] = checkUnicodeRange(font, 0x2CEB0, 0x2EBE0); // CJK Unified Ideographs Extension F
-                uniHans[fchckr.extended[langInfo.lang]+'G'] = checkUnicodeRange(font, 0x30000, 0x3134A); // CJK Unified Ideographs Extension G
-                uniHans[fchckr.extended[langInfo.lang]+'H'] = checkUnicodeRange(font, 0x31350, 0x323AF); // CJK Unified Ideographs Extension H
-                uniHans[fchckr.extended[langInfo.lang]+'I'] = checkUnicodeRange(font, 0x2EBF0, 0x2EE5F); // CJK Unified Ideographs Extension H
-                uniHans[fchckr.compatible[langInfo.lang]] = checkUnicodeRange(font, 0xF900, 0xFAD9); // CJK Compatibility Ideographs
-                uniHans[fchckr.compatibleExt[langInfo.lang]] = checkUnicodeRange(font, 0x2F800, 0x2FA1D); // CJK Compatibility Ideographs Supplement
-                cntHtml = charsetBox(font, fchckr.unihan[langInfo.lang], uniHans);
+                uniHans[ui('unifiedCJK')] = checkUnicodeRange(0x4E00, 0x9FFF);  // CJK Unified Ideographs
+                uniHans[ui('extended')+'A'] = checkUnicodeRange(0x3400, 0x4DBF); // CJK Unified Ideographs Extension A
+                uniHans[ui('extended')+'B'] = checkUnicodeRange(0x20000, 0x2A6DF); // CJK Unified Ideographs Extension B
+                uniHans[ui('extended')+'C'] = checkUnicodeRange(0x2A700, 0x2B739); // CJK Unified Ideographs Extension C
+                uniHans[ui('extended')+'D'] = checkUnicodeRange(0x2B740, 0x2B81D); // CJK Unified Ideographs Extension D
+                uniHans[ui('extended')+'E'] = checkUnicodeRange(0x2B820, 0x2CEA1); // CJK Unified Ideographs Extension E
+                uniHans[ui('extended')+'F'] = checkUnicodeRange(0x2CEB0, 0x2EBE0); // CJK Unified Ideographs Extension F
+                uniHans[ui('extended')+'G'] = checkUnicodeRange(0x30000, 0x3134A); // CJK Unified Ideographs Extension G
+                uniHans[ui('extended')+'H'] = checkUnicodeRange(0x31350, 0x323AF); // CJK Unified Ideographs Extension H
+                uniHans[ui('extended')+'I'] = checkUnicodeRange(0x2EBF0, 0x2EE5F); // CJK Unified Ideographs Extension H
+                uniHans[ui('compatible')] = checkUnicodeRange(0xF900, 0xFAD9); // CJK Compatibility Ideographs
+                uniHans[ui('compatibleExt')] = checkUnicodeRange(0x2F800, 0x2FA1D); // CJK Compatibility Ideographs Supplement
+                cntHtml = charsetBox(ui('unihan'), uniHans);
+            }
+            return cntHtml;
+        }
+
+        function processCharsetBox_CID(cffROS) {
+            if (!cffROS) return '';
+            let cntHtml = '';
+            let cidMap = {};
+
+            if (cffROS.startsWith('Adobe-CNS1')) {
+                cntHtml += charsetBox('Adobe-CNS1', {
+                    'CNS1-0': checkCIDRange(cidMap, 1, 14098),
+                    'CNS1-1': checkCIDRange(cidMap, 14099, 17407),
+                    'CNS1-2': checkCIDRange(cidMap, 17408, 17600),
+                    'CNS1-3': checkCIDRange(cidMap, 17601, 18845),
+                    'CNS1-4': checkCIDRange(cidMap, 18846, 18964),
+                    'CNS1-5': checkCIDRange(cidMap, 18965, 19087),
+                    'CNS1-6': checkCIDRange(cidMap, 19088, 19155),
+                    'CNS1-7': checkCIDRange(cidMap, 19156, 19178),
+                });
+            } else if (cffROS.startsWith('Adobe-GB1')) {
+                cntHtml += charsetBox('Adobe-GB1', {
+                    'GB1-0': checkCIDRange(cidMap, 1, 7716),
+                    'GB1-1': checkCIDRange(cidMap, 7717, 9896),
+                    'GB1-2': checkCIDRange(cidMap, 9897, 22126),
+                    'GB1-3': checkCIDRange(cidMap, 22127, 22352),
+                    'GB1-4': checkCIDRange(cidMap, 22353, 29063),
+                    'GB1-5': checkCIDRange(cidMap, 29064, 30283),
+                    'GB1-6': checkCIDRange(cidMap, 30284, 30571),
+                });
+            } else if (cffROS.startsWith('Adobe-Japan1')) {
+                cntHtml += charsetBox('Adobe-Japan1', {
+                    'Japan1-0': checkCIDRange(cidMap, 1, 8283),
+                    'Japan1-1': checkCIDRange(cidMap, 8284, 8358),
+                    'Japan1-2': checkCIDRange(cidMap, 8359, 8719),
+                    'Japan1-3': checkCIDRange(cidMap, 8720, 9353),
+                    'Japan1-4': checkCIDRange(cidMap, 9354, 15443),
+                    'Japan1-5': checkCIDRange(cidMap, 15444, 20316),
+                    'Japan1-6': checkCIDRange(cidMap, 20317, 23057),
+                    'Japan1-7': checkCIDRange(cidMap, 23058, 23059),
+                });
+            } else if (cffROS.startsWith('Adobe-KR')) {
+                cntHtml += charsetBox('Adobe-KR', {
+                    'KR-0': checkCIDRange(cidMap, 1, 3058),
+                    'KR-1': checkCIDRange(cidMap, 3059, 4636),
+                    'KR-2': checkCIDRange(cidMap, 4637, 11450),
+                    'KR-3': checkCIDRange(cidMap, 11451, 11730),
+                    'KR-4': checkCIDRange(cidMap, 11731, 11877),
+                    'KR-5': checkCIDRange(cidMap, 11878, 12234),
+                    'KR-6': checkCIDRange(cidMap, 12235, 14237),
+                    'KR-7': checkCIDRange(cidMap, 14238, 18857),
+                    'KR-8': checkCIDRange(cidMap, 18858, 22479),
+                    'KR-9': checkCIDRange(cidMap, 22480, 22896),
+                });
             }
 
+            return cntHtml;
+        }
+
+        function processCharsetBox_Local(lang) {
+            let cntHtml = '';
 
             if (langInfo.lang == 'zh-TW') {
-                let cidMap = {};
-                if (cffROS != null && cffROS.startsWith('Adobe-CNS1')) {
-                    cntHtml += charsetBox(font, 'Adobe-CNS1', {
-                        'CNS1-0': checkCIDRange(font, cidMap, 1, 14098),
-                        'CNS1-1': checkCIDRange(font, cidMap, 14099, 17407),
-                        'CNS1-2': checkCIDRange(font, cidMap, 17408, 17600),
-                        'CNS1-3': checkCIDRange(font, cidMap, 17601, 18845),
-                        'CNS1-4': checkCIDRange(font, cidMap, 18846, 18964),
-                        'CNS1-5': checkCIDRange(font, cidMap, 18965, 19087),
-                        'CNS1-6': checkCIDRange(font, cidMap, 19088, 19155),
-                        'CNS1-7': checkCIDRange(font, cidMap, 19156, 19178),
-                    });
-                }
-
-                cntHtml += charsetBox(font, 'Big5', {
-                    '常用字': checkCharset(font, 'T-Big5-1'),
-                    '次常用字': checkCharset(font, 'T-Big5-2'),
-                    '符號': checkCharset(font, 'T-Big5-Sym'),
-                    '倚天延伸': checkCharset(font, 'T-Big5-ETen'),
-                    'GCCS': checkCharset(font, 'T-Big5-GCCS'),
-                    'HKSCS-1999': checkCharset(font, 'T-Big5-HK1999'),
-                    'HKSCS-2001': checkCharset(font, 'T-Big5-HK2001'),
-                    'HKSCS-2004': checkCharset(font, 'T-Big5-HK2004'),
-                    'HKSCS-2008': checkCharset(font, 'T-Big5-HK2008'),
-                    'HKSCS-2016': checkCharset(font, 'T-Big5-HK2016'),
+                cntHtml += charsetBox('Big5', {
+                    '常用字': checkCharset('T-Big5-1'),
+                    '次常用字': checkCharset('T-Big5-2'),
+                    '符號': checkCharset('T-Big5-Sym'),
+                    '倚天延伸': checkCharset('T-Big5-ETen'),
+                    'GCCS': checkCharset('T-Big5-GCCS'),
+                    'HKSCS-1999': checkCharset('T-Big5-HK1999'),
+                    'HKSCS-2001': checkCharset('T-Big5-HK2001'),
+                    'HKSCS-2004': checkCharset('T-Big5-HK2004'),
+                    'HKSCS-2008': checkCharset('T-Big5-HK2008'),
+                    'HKSCS-2016': checkCharset('T-Big5-HK2016'),
                 });
-                cntHtml += charsetBox(font, '教育規格', {
-                    '常用(甲表)': checkCharset(font, 'T-Edu-1'),
-                    '次常用(乙表)': checkCharset(font, 'T-Edu-2'),
-                    '台語漢字': checkCharset(font, 'T-Taigi'),
-                    '客語漢字': checkCharset(font, 'T-Hakka'),
+                cntHtml += charsetBox('教育規格', {
+                    '常用(甲表)': checkCharset('T-Edu-1'),
+                    '次常用(乙表)': checkCharset('T-Edu-2'),
+                    '台語漢字': checkCharset('T-Taigi'),
+                    '客語漢字': checkCharset('T-Hakka'),
                 });
-                cntHtml += charsetBox(font, 'jf當務字集', {
-                    '基本包': checkCharset(font, 'T-jf-Base'),
-                    '命名包': checkCharset(font, 'T-jfext-Naming'),
-                    '本土語言包': checkCharset(font, 'T-jfext-Taiwan'),
-                    '粵語包': checkCharset(font, 'T-jfext-Cantonese'),
-                    '日文包': checkCharset(font, 'T-jfext-Japan'),
-                    '符號包': checkCharset(font, 'T-jfext-Symbols'),
+                cntHtml += charsetBox('jf當務字集', {
+                    '基本包': checkCharset('T-jf-Base'),
+                    '命名包': checkCharset('T-jfext-Naming'),
+                    '本土語言包': checkCharset('T-jfext-Taiwan'),
+                    '粵語包': checkCharset('T-jfext-Cantonese'),
+                    '日文包': checkCharset('T-jfext-Japan'),
+                    '符號包': checkCharset('T-jfext-Symbols'),
                 });
 
             } else if (langInfo.lang == 'zh') {
-                let cidMap = {};
-                if (cffROS != null && cffROS.startsWith('Adobe-GB1')) {
-                    cntHtml += charsetBox(font, 'Adobe-GB1', {
-                        'GB1-0': checkCIDRange(font, cidMap, 1, 7716),
-                        'GB1-1': checkCIDRange(font, cidMap, 7717, 9896),
-                        'GB1-2': checkCIDRange(font, cidMap, 9897, 22126),
-                        'GB1-3': checkCIDRange(font, cidMap, 22127, 22352),
-                        'GB1-4': checkCIDRange(font, cidMap, 22353, 29063),
-                        'GB1-5': checkCIDRange(font, cidMap, 29064, 30283),
-                        'GB1-6': checkCIDRange(font, cidMap, 30284, 30571)
-                    });
-                }
-
-                cntHtml += charsetBox(font, '国标', {
-                    'GB2312': checkCharset(font, 'C-GB2312'),
-                    'GBK': checkCharset(font, 'C-GBK'),
-                    'GB2312汉字': checkCharset(font, 'C-GB2312-HZ'),
-                    'GBK汉字': checkCharset(font, 'C-GBK-HZ'),
+                cntHtml += charsetBox('国标', {
+                    'GB2312': checkCharset('C-GB2312'),
+                    'GBK': checkCharset('C-GBK'),
+                    'GB2312汉字': checkCharset('C-GB2312-HZ'),
+                    'GBK汉字': checkCharset('C-GBK-HZ'),
                 });
 
             } else if (langInfo.lang == 'ja') {
-                let cidMap = {};
-                if (cffROS != null && cffROS.startsWith('Adobe-Japan1')) {
-                    cntHtml += charsetBox(font, 'Adobe-Japan1', {
-                        'Japan1-0': checkCIDRange(font, cidMap, 1, 8283),
-                        'Japan1-1': checkCIDRange(font, cidMap, 8284, 8358),
-                        'Japan1-2': checkCIDRange(font, cidMap, 8359, 8719),
-                        'Japan1-3': checkCIDRange(font, cidMap, 8720, 9353),
-                        'Japan1-4': checkCIDRange(font, cidMap, 9354, 15443),
-                        'Japan1-5': checkCIDRange(font, cidMap, 15444, 20316),
-                        'Japan1-6': checkCIDRange(font, cidMap, 20317, 23057),
-                        'Japan1-7': checkCIDRange(font, cidMap, 23058, 23059),
-                    });
-                }
-
-                cntHtml += charsetBox(font, 'JIS', {
-                    'JIS X 0208': checkCharset(font, 'J-JISX0208'),
-                    'JIS X 0212': checkCharset(font, 'J-JISX0212'),
-                    'JIS X 0213': checkCharset(font, 'J-JISX0213'),
-                    '第一水準漢字': checkCharset(font, 'J-JIS-1'),
-                    '第二水準漢字': checkCharset(font, 'J-JIS-2'),
-                    '第三水準漢字': checkCharset(font, 'J-JIS-3'),
-                    '第四水準漢字': checkCharset(font, 'J-JIS-4'),
+                cntHtml += charsetBox('JIS', {
+                    'JIS X 0208': checkCharset('J-JISX0208'),
+                    'JIS X 0212': checkCharset('J-JISX0212'),
+                    'JIS X 0213': checkCharset('J-JISX0213'),
+                    '第一水準漢字': checkCharset('J-JIS-1'),
+                    '第二水準漢字': checkCharset('J-JIS-2'),
+                    '第三水準漢字': checkCharset('J-JIS-3'),
+                    '第四水準漢字': checkCharset('J-JIS-4'),
                 });
-                cntHtml += charsetBox(font, '行政', {
-                    '教育漢字': checkCharset(font, 'J-Kyoiku'),
-                    '常用漢字': checkCharset(font, 'J-Joyo'),
-                    '人名用漢字': checkCharset(font, 'J-Jinmei'),
+                cntHtml += charsetBox('行政', {
+                    '教育漢字': checkCharset('J-Kyoiku'),
+                    '常用漢字': checkCharset('J-Joyo'),
+                    '人名用漢字': checkCharset('J-Jinmei'),
                 });
-                cntHtml += charsetBox(font, '漢検漢字', {
-                    '十級': checkCharset(font, 'J-Kanken-LV10'),
-                    '九級': checkCharset(font, 'J-Kanken-LV9'),
-                    '八級': checkCharset(font, 'J-Kanken-LV8'),
-                    '七級': checkCharset(font, 'J-Kanken-LV7'),
-                    '六級': checkCharset(font, 'J-Kanken-LV6'),
-                    '五級': checkCharset(font, 'J-Kanken-LV5'),
-                    '四級': checkCharset(font, 'J-Kanken-LV4'),
-                    '三級': checkCharset(font, 'J-Kanken-LV3'),
-                    '準二級': checkCharset(font, 'J-Kanken-LV2J'),
-                    '二級': checkCharset(font, 'J-Kanken-LV2'),
-                    '準一級': checkCharset(font, 'J-Kanken-LV1J'),
-                    '一級': checkCharset(font, 'J-Kanken-LV1'),
+                cntHtml += charsetBox('漢検漢字', {
+                    '十級': checkCharset('J-Kanken-LV10'),
+                    '九級': checkCharset('J-Kanken-LV9'),
+                    '八級': checkCharset('J-Kanken-LV8'),
+                    '七級': checkCharset('J-Kanken-LV7'),
+                    '六級': checkCharset('J-Kanken-LV6'),
+                    '五級': checkCharset('J-Kanken-LV5'),
+                    '四級': checkCharset('J-Kanken-LV4'),
+                    '三級': checkCharset('J-Kanken-LV3'),
+                    '準二級': checkCharset('J-Kanken-LV2J'),
+                    '二級': checkCharset('J-Kanken-LV2'),
+                    '準一級': checkCharset('J-Kanken-LV1J'),
+                    '一級': checkCharset('J-Kanken-LV1'),
                 });
 
                 $('#sample-ivs-adobe').hide();
@@ -488,64 +575,13 @@
                 }
 
             } else if (langInfo.lang == 'ko') {
-                let cidMap = {};
-                if (cffROS != null && cffROS.startsWith('Adobe-KR')) {
-                    cntHtml += charsetBox(font, 'Adobe-KR', {
-                        'KR-0': checkCIDRange(font, cidMap, 1, 3058),
-                        'KR-1': checkCIDRange(font, cidMap, 3059, 4636),
-                        'KR-2': checkCIDRange(font, cidMap, 4637, 11450),
-                        'KR-3': checkCIDRange(font, cidMap, 11451, 11730),
-                        'KR-4': checkCIDRange(font, cidMap, 11731, 11877),
-                        'KR-5': checkCIDRange(font, cidMap, 11878, 12234),
-                        'KR-6': checkCIDRange(font, cidMap, 12235, 14237),
-                        'KR-7': checkCIDRange(font, cidMap, 14238, 18857),
-                        'KR-8': checkCIDRange(font, cidMap, 18858, 22479),
-                        'KR-9': checkCIDRange(font, cidMap, 22480, 22896)
-                    });
-                }
-                cntHtml += charsetBox(font, 'KS', {
-                    'KS X 1001': checkCharset(font, 'K-KSX1001'),
-                    'CP949': checkCharset(font, 'K-CP949'),
+                cntHtml += charsetBox('KS', {
+                    'KS X 1001': checkCharset('K-KSX1001'),
+                    'CP949': checkCharset('K-CP949'),
                 });
-
-
-            } else {
-
             }
-            $('#font-counts').html(cntHtml);
 
-            let detailHider = null;
-            $('.item').on({
-                mouseenter: function (e) {
-                    clearTimeout(detailHider);
-                    const exists = $(this).data('exists');
-                    const miss = $(this).data('miss');
-                    if (exists) {
-                        $('#details').attr('class', 'exists')
-                            .html(`<h3>${fchckr.existsTitle[langInfo.lang]}</h3><div>${exists}</div>`);
-                    } else if (miss) {
-                        $('#details').attr('class', 'miss')
-                            .html(`<h3>${fchckr.missTitle[langInfo.lang]}</h3><div>${miss}</div>`)
-                    } else {
-                        $('#details').hide();
-                        return;
-                    }
-                    let pos = $(this).position();
-                    console.log('浮動視窗位置:', pos);
-                    $('#details').css({left: `${pos.left - 200}px`, top: `${pos.top + 40}px`}).show();
-                },
-                mouseleave: function () {
-                    // 延遲檢查是否滑鼠離開浮動視窗
-                    detailHider = setTimeout(() => {
-                        if (!$('#details:hover').length) $('#details').hide();
-                    }, 100); // 延遲 100 毫秒，避免快速移動導致視窗消失
-                }
-            });
-
-            // 當滑鼠離開浮動視窗時隱藏
-            $('#details').on('mouseleave', function () {
-                $(this).css('display', 'none');
-            });
+            return cntHtml;
         }
 
         const flagMap = {};
@@ -553,7 +589,7 @@
             flagMap[char] = index;
         });
 
-        function charsetBox(font, title, tags) {
+        function charsetBox(title, tags) {
             let html = `<div class="charset-box"><h3>${title}</h3>`;
             for (var tag in tags) {
                 var cnt = tags[tag];
@@ -570,7 +606,7 @@
         }
 
         const maxLimit = 250;
-        function checkUnicodeRange(font, rangeStart, rangeEnd) {
+        function checkUnicodeRange(rangeStart, rangeEnd) {
             var cnt = 0;
             var exists = [];
             var miss = [];
@@ -591,7 +627,7 @@
             };
         }
 
-        function checkCIDRange(font, cidMap, rangeStart, rangeEnd) {
+        function checkCIDRange(cidMap, rangeStart, rangeEnd) {
             if (Object.keys(cidMap).length === 0) { // 如果 cidMap 為空，則建立一個新的 cidMap
                 for (var cid of font.cffEncoding.charset) {
                     if (cid == '.notdef') continue; // 跳過 .notdef
@@ -605,7 +641,7 @@
             return {cnt: cnt, all: rangeEnd-rangeStart+1};
         }
 
-        function checkCharset(font, tag) {
+        function checkCharset(tag) {
             var cmap = font.encoding.cmap.glyphIndexMap;
             var cnt = 0;
             var limit = Math.min(maxLimit, Math.floor(charset[tag].cnt/3));
@@ -646,6 +682,41 @@
             };
         }
 
+        function applyDetailPopup() {
+            let detailHider = null;
+            $('.item').on({
+                mouseenter: function (e) {
+                    clearTimeout(detailHider);
+                    const exists = $(this).data('exists');
+                    const miss = $(this).data('miss');
+                    if (exists) {
+                        $('#details').attr('class', 'exists')
+                            .html(`<h3>${ui('existsTitle')}</h3><div>${exists}</div>`);
+                    } else if (miss) {
+                        $('#details').attr('class', 'miss')
+                            .html(`<h3>${ui('missTitle')}</h3><div>${miss}</div>`)
+                    } else {
+                        $('#details').hide();
+                        return;
+                    }
+                    let pos = $(this).position();
+                    //console.log('浮動視窗位置:', pos);
+                    $('#details').css({left: `${pos.left - 200}px`, top: `${pos.top + 40}px`}).show();
+                },
+                mouseleave: function () {
+                    // 延遲檢查是否滑鼠離開浮動視窗
+                    detailHider = setTimeout(() => {
+                        if (!$('#details:hover').length) $('#details').hide();
+                    }, 100); // 延遲 100 毫秒，避免快速移動導致視窗消失
+                }
+            });
+
+            // 當滑鼠離開浮動視窗時隱藏
+            $('#details').on('mouseleave', function () {
+                $(this).css('display', 'none');
+            });
+        }
+
         // 將字型應用到 #sample 的內容
         function applyFont(font) {
             const fontFace = new FontFace('CustomFont', font);
@@ -658,6 +729,28 @@
                 console.error('字型載入失敗', error);
             });
         }
+
+        $(document).ready(function() {
+            function showSettingButton() {
+                let pos = $samples.position();
+                $settingBtn.show().css({left: pos.left + $samples.width() - 30, top: pos.top + 10});
+            }
+
+            const $samples = $('#samples');
+            const $settingBtn = $('#sampleSetting')
+            $samples.on('mouseover', showSettingButton).on('mouseout', function() {
+                $settingBtn.hide();
+            });
+            $settingBtn.on('mouseover', showSettingButton).on('click', function() {
+                // 跳出 prompt 讓使用者輸入文字
+                const userInput = prompt(ui('customText'));
+                if (userInput !== null) {
+                    // 將文字存到 localStorage
+                    localStorage.setItem('sampleText', userInput);
+                    showSamples();
+                }
+            });
+        });
 
     </script>
 </body>

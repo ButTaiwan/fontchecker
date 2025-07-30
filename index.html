@@ -105,7 +105,7 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script src="https://opentype.js.org/dist/opentype.js"></script>
-	<script src="langinfo.js"></script>
+	<script src="langInfo.js"></script>
 	<script src="charset.js"></script>
     <script>
         const dropzone = document.getElementById('dropzone');
@@ -516,8 +516,8 @@
                 cntHtml += charsetBox('教育規格', {
                     '常用(甲表)': checkCharset('T-Edu-1'),
                     '次常用(乙表)': checkCharset('T-Edu-2'),
-                    '台語漢字': checkCharset('T-Taigi'),
-                    '客語漢字': checkCharset('T-Hakka'),
+                    '台語教典': checkCharset('T-Taigi'),
+                    '客語教典': checkCharset('T-Hakka'),
                 });
                 cntHtml += charsetBox('jf當務字集', {
                     '基本包': checkCharset('T-jf-Base'),

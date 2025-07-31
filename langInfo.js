@@ -8,6 +8,9 @@ const fchckr = {
 	missTitle: {'zh-TW': '缺少', 'ja': '欠落', 'zh': '缺少', 'ko': '누락', 'en': 'Missing'},
 	customText: {'zh-TW': '請輸入要顯示的文字：', 'ja': '表示する文字を入力してください：', 'zh': '请输入要显示的文字：', 'ko': '표시할 문자를 입력하세요：', 'en': 'Enter the text to display:'},
 	customCaption: {'zh-TW': '自訂範例', 'ja': 'カスタムサンプル', 'zh': '自定义文本', 'ko': '사용자 정의 샘플', 'en': 'Custom Sample'},
+	sum: {'zh-TW': '總計', 'ja': '合計', 'zh': '总计', 'ko': '합계', 'en': 'Total'},
+	glyphCount: {'zh-TW': '字符', 'ja': 'グリフ', 'zh': '字形', 'ko': '글리프', 'en': 'glyphs'},
+	charCount: {'zh-TW': '字碼', 'ja': '文字', 'zh': '字符', 'ko': '문자', 'en': 'characters'},
 
 	version: {'zh-TW': '版本：', 'ja': 'バージョン：', 'zh': '版本：', 'ko': '버전：', 'en': 'Version: '},
 	manufacturer: {'zh-TW': '廠商：', 'ja': 'ベンダー：', 'zh': '厂商：', 'ko': '제작사：', 'en': 'Vendor: '},
@@ -25,7 +28,7 @@ const langMeta = {
 		string: '繁體中文',
 		sampleTexts: {
 			'基本文字': ['我能吞下玻璃而不傷身體。', '南去經三國，東來過五湖。'],
-			'台文（漢字、台羅）': ['我𠢕食玻璃，嘛袂著傷。', 'Guá gâu tsia̍h po-lê, mā bē tio̍h-siong.'],
+			'台文（漢字、台羅）': ['我誠𠢕食玻璃，嘛袂著傷。', 'Guá tsiânn gâu tsia̍h po-lê, mā bē tio̍h-siong.'],
 			'日文': ['私は体を傷つけずにガラスを食べられます。'],
 			'命名罕用字': ['珢㚬㛄㛢㨗㶈㷍㼈䕒䭲祜祤禇禑禔'],
 			'蘇州碼': ['〇〡〢〣〤〥〦〧〨〩'],

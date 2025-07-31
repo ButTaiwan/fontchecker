@@ -23,7 +23,7 @@
         .box { display: block; padding: 10px; box-sizing: border-box; /*border: 1px solid #ccc; border-radius: 5px;*/ position: relative; }
 
         /* #info { background-color: #f9f9f9; } */
-        #head { margin: 10px }
+        #head { margin: 10px 10px 0 10px }
 
         #name { flex: 2 1 440px }
         #name h1#font-name { display: inline-block; font-size: 48px; margin: 0; color: #333; line-height: 1.2; }
@@ -31,14 +31,17 @@
         #name #font-ros { display: inline-block; background-color: #226f9b; font-size: 18px; color: #fff; padding: 5px 10px; border-radius: 5px; vertical-align: top; margin-left: 10px; line-height: 1.2; }
         #name h2#font-name-en { font-size: 32px; margin: 0; color: #333; line-height: 1.2; font-style: italic; }
 
-        #meta { flex: 3 0 450px; border-left: 4px solid #44b496; padding-left: 50px; color: #666; line-height: 1.3; font-size: 0.85em }
-        #meta p { text-indent: -40px; margin: 0; font-family: "Cabin Condensed", sans-serif; font-weight: 400; font-style: normal; max-height: 3.2em; overflow-x: visible ; overflow-y: clip; position: relative; }
-        #meta p::after {
-            position: absolute; content: ''; top: 0; left: 0; width: 100%; height: 3.2em; pointer-events: none;
-            background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 2.5em, rgba(255, 255, 255, 1) 3.1em);
-        }
-        #meta em { font-weight: bold; font-style: normal; }
-        #meta a { text-decoration: none }
+        #cnts { flex: 0 0 90px }
+        #font-glyphs { font: bold 1.4em/1.1 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; background-color: #44b496; color: #fff; margin: 0; padding: 8px 10px 5px 10px; text-align: right; border-radius: 10px 10px 0 0 }
+        #font-glyphs::after { content: attr(data-name); font: normal 12px/1 sans-serif; display: block }
+        #font-chars { font: bold 1.4em/1.1 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; background-color: #229b7b; color: #fff; margin: 0; padding: 5px 10px 8px 10px; text-align: right; border-radius: 0 0 10px 10px }
+        #font-chars::after { content: attr(data-name); font: normal 12px/1 sans-serif; display: block }
+
+        #rights { flex: 3 0 350px; }
+        #rights { padding-left: 30px; color: #666; line-height: 1.3; font-size: 0.85em}
+        #rights p { text-indent: -30px; margin: 0; font-family: "Cabin Condensed", sans-serif; font-weight: 400; font-style: normal; max-height: 2.6em; overflow-x: visible ; overflow-y: clip; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-clamp: 2 }
+        #rights em { font-weight: bold; font-style: normal; }
+        #rights a { text-decoration: none }
 
         #samples { flex: 2 1 400px }
         #samples h3 { margin: 10px 0; font-size: 1em; color: #229b7b; border-bottom: 2px solid #229b7b; padding: 4px }
@@ -90,7 +93,11 @@
             <div id="font-ros"></div>
             <h2 id="font-name-en"></h2>
         </div>
-        <div id="meta"></div>
+        <div id="cnts">
+            <div id="font-glyphs"></div>
+            <div id="font-chars"></div>
+        </div>
+        <div id="rights"></div>
     </div>
     
     <div id="body" class="container">
@@ -160,6 +167,10 @@
                 }
             }
         });
+
+        function addCommas(number) {
+            return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); // 使用正則表達式添加逗號
+        }
 
         let font = null;
         let langInfo = null;
@@ -311,6 +322,11 @@
             let cffROS = (font.isCIDFont && !!font.tables.cff && !!font.tables.cff.topDict.ros) ? font.tables.cff.topDict.ros.join('-') : null;
             $('#font-ros').hide().toggle(cffROS != null).text(cffROS);
 
+            var charCnt = Object.keys(font.encoding.cmap.glyphIndexMap).length;
+            $('#font-glyphs').text(addCommas(font.glyphs.length)).attr('data-name', ui('glyphCount'));
+            $('#font-chars').text(addCommas(charCnt)).attr('data-name', ui('charCount'));
+            //$('#font-cnt').html(`${ui('glyphCount')}${font.glyphs.length} / ${ui('charCount')}${charCnt}`);
+
             let nHtml = '';
             nHtml += addNameEntry('version');
             nHtml += addNameEntry('copyright');
@@ -320,7 +336,7 @@
             // nHtml += `<dt>${ui('version')}</dt><dd>${ getNameEntry(font, 'version', langInfo.lang) }</dd>`;
             // nHtml += `<dt>${ui('vendor')}</dt><dd>${ getNameEntry(font, 'manufacturer', langInfo.lang) } (${ font.tables.os2.achVendID })<br>`;
             // nHtml += `授權：${ getNameEntry(font, 'license', langInfo.lang) }<br>`;
-            $('#meta').html(nHtml);
+            $('#rights').html(nHtml);
 
             showSamples();
 
@@ -425,19 +441,19 @@
 
             if (langInfo.isCJK) {
                 var uniHans = {};
-                uniHans[ui('unifiedCJK')] = checkUnicodeRange(0x4E00, 0x9FFF);  // CJK Unified Ideographs
-                uniHans[ui('extended')+'A'] = checkUnicodeRange(0x3400, 0x4DBF); // CJK Unified Ideographs Extension A
-                uniHans[ui('extended')+'B'] = checkUnicodeRange(0x20000, 0x2A6DF); // CJK Unified Ideographs Extension B
-                uniHans[ui('extended')+'C'] = checkUnicodeRange(0x2A700, 0x2B739); // CJK Unified Ideographs Extension C
-                uniHans[ui('extended')+'D'] = checkUnicodeRange(0x2B740, 0x2B81D); // CJK Unified Ideographs Extension D
-                uniHans[ui('extended')+'E'] = checkUnicodeRange(0x2B820, 0x2CEA1); // CJK Unified Ideographs Extension E
-                uniHans[ui('extended')+'F'] = checkUnicodeRange(0x2CEB0, 0x2EBE0); // CJK Unified Ideographs Extension F
-                uniHans[ui('extended')+'G'] = checkUnicodeRange(0x30000, 0x3134A); // CJK Unified Ideographs Extension G
-                uniHans[ui('extended')+'H'] = checkUnicodeRange(0x31350, 0x323AF); // CJK Unified Ideographs Extension H
-                uniHans[ui('extended')+'I'] = checkUnicodeRange(0x2EBF0, 0x2EE5F); // CJK Unified Ideographs Extension H
-                uniHans[ui('compatible')] = checkUnicodeRange(0xF900, 0xFAD9); // CJK Compatibility Ideographs
-                uniHans[ui('compatibleExt')] = checkUnicodeRange(0x2F800, 0x2FA1D); // CJK Compatibility Ideographs Supplement
-                cntHtml = charsetBox(ui('unihan'), uniHans);
+                uniHans[ui('unifiedCJK')] = checkUnicodeRange([[0x4E00, 0x9FFF]]);  // CJK Unified Ideographs
+                uniHans[ui('extended')+'A'] = checkUnicodeRange([[0x3400, 0x4DBF]]); // CJK Unified Ideographs Extension A
+                uniHans[ui('extended')+'B'] = checkUnicodeRange([[0x20000, 0x2A6DF]]); // CJK Unified Ideographs Extension B
+                uniHans[ui('extended')+'C'] = checkUnicodeRange([[0x2A700, 0x2B739]]); // CJK Unified Ideographs Extension C
+                uniHans[ui('extended')+'D'] = checkUnicodeRange([[0x2B740, 0x2B81D]]); // CJK Unified Ideographs Extension D
+                uniHans[ui('extended')+'E'] = checkUnicodeRange([[0x2B820, 0x2CEA1]]); // CJK Unified Ideographs Extension E
+                uniHans[ui('extended')+'F'] = checkUnicodeRange([[0x2CEB0, 0x2EBE0]]); // CJK Unified Ideographs Extension F
+                uniHans[ui('extended')+'G'] = checkUnicodeRange([[0x30000, 0x3134A]]); // CJK Unified Ideographs Extension G
+                uniHans[ui('extended')+'H'] = checkUnicodeRange([[0x31350, 0x323AF]]); // CJK Unified Ideographs Extension H
+                uniHans[ui('extended')+'I'] = checkUnicodeRange([[0x2EBF0, 0x2EE5F]]); // CJK Unified Ideographs Extension H
+                uniHans[ui('compatible')] = checkUnicodeRange([[0xF900, 0xFA6D], [0xFA70, 0xFAD9]]); // CJK Compatibility Ideographs
+                uniHans[ui('compatibleExt')] = checkUnicodeRange([[0x2F800, 0x2FA1D]]); // CJK Compatibility Ideographs Supplement
+                cntHtml = charsetBox(ui('unihan'), uniHans, true);
             }
             return cntHtml;
         }
@@ -575,10 +591,19 @@
                 }
 
             } else if (langInfo.lang == 'ko') {
+                cntHtml += charsetBox('Unicode한글', {
+                    '한글자모 / Jamo': checkUnicodeRange([[0x1100, 0x11FF]]),
+                    '호환용한글': checkUnicodeRange([[0x3131, 0x3163], [0x3165, 0x318E]]),
+                    '한글음절 / Syllables': checkUnicodeRange([[0xAC00, 0xD7A3]]),
+                    '한글확장A / Extended-A': checkUnicodeRange([[0xA960, 0xA97C]]),
+                    '한글확장B / Extended-B': checkUnicodeRange([[0xD7B0, 0xD7C6], [0xD7CB, 0xD7FB]]),
+                });                
+
                 cntHtml += charsetBox('KS', {
                     'KS X 1001': checkCharset('K-KSX1001'),
                     'CP949': checkCharset('K-CP949'),
                 });
+
             }
 
             return cntHtml;
@@ -589,8 +614,9 @@
             flagMap[char] = index;
         });
 
-        function charsetBox(title, tags) {
+        function charsetBox(title, tags, showSum = false) {
             let html = `<div class="charset-box"><h3>${title}</h3>`;
+            let sum = 0;
             for (var tag in tags) {
                 var cnt = tags[tag];
                 var exists = cnt.exists && cnt.exists.length ? 'data-exists="' + cnt.exists.map(uni => `&#${uni};`).join(' ') + '"' : '';
@@ -600,28 +626,41 @@
                             <span class="tag">${tag}</span>
                             <span class="value"><span class="all">${cnt.all}/</span><span class="cnt">${cnt.cnt}</span></span>
                         </div>`;
+                sum += cnt.cnt;
             }
+            if (showSum) {
+                html += `<div class="item">
+                            <span class="tag">${ui('sum')}</span>
+                            <span class="value"><span class="cnt">${sum}</span></span>
+                        </div>`;
+
+            }
+
             html += '</div>';
             return html;
         }
 
         const maxLimit = 250;
-        function checkUnicodeRange(rangeStart, rangeEnd) {
-            var cnt = 0;
+        function checkUnicodeRange(ranges) {
+            var cnt = 0, all = 0;
             var exists = [];
             var miss = [];
-            var limit = Math.min(maxLimit, Math.floor((rangeEnd-rangeStart+1)/3));
+            //var limit = Math.min(maxLimit, Math.floor((rangeEnd-rangeStart+1)/3));
 
-            for (var i=rangeStart; i<=rangeEnd; i++) {
-                if (font.encoding.cmap.glyphIndexMap[i+''] !== undefined) {
-                    cnt++;
-                    if (exists.length <= limit) exists.push(i);
-                } else {
-                    if (miss.length <= limit) miss.push(i);
+            for (let r of ranges) {
+                for (var i=r[0]; i<=r[1]; i++) {
+                    all++;
+                    if (font.encoding.cmap.glyphIndexMap[i+''] !== undefined) {
+                        cnt++;
+                        if (exists.length <= maxLimit) exists.push(i);
+                    } else {
+                        if (miss.length <= maxLimit) miss.push(i);
+                    }
                 }
             }
+            var limit = Math.min(maxLimit, all);
 
-            return {cnt: cnt, all: rangeEnd-rangeStart+1,
+            return {cnt: cnt, all: all,
                 miss: miss.length < limit ? miss : null,
                 exists: exists.length < limit ? exists : null
             };

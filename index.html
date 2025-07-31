@@ -65,8 +65,7 @@
         #info .charset-box .item .value { text-align: right; }
         #info .charset-box .item .value .cnt { color: #229b7b; font-weight: bold; font-size: 1.5em; }
         #info .charset-box .item .value .all { color: #999; font-size: 0.8em; vertical-align: super; }
-        #info .charset-box .item[data-exists] { background: linear-gradient(to bottom, #fff, #d4e9f7); cursor: help;}
-        #info .charset-box .item[data-miss] { background: linear-gradient(to bottom, #fff, #f7d4d4); cursor: help; }
+        #info .charset-box .item.part { background: linear-gradient(to bottom, #fff, #d4f7f0), linear-gradient(to bottom, #fff, #f7d4d8); background-repeat: no-repeat; cursor: pointer; }
 
         #details { position: absolute; z-index: 100; width: 440px; border-radius: 7px; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); padding: 10px; background-color: #fff; display: none; opacity: 0.9; }
         #details h3 { font-weight: bold; color: #333; margin: 0 0 10px 0; }
@@ -618,11 +617,18 @@
             let html = `<div class="charset-box"><h3>${title}</h3>`;
             let sum = 0;
             for (var tag in tags) {
-                var cnt = tags[tag];
-                var exists = cnt.exists && cnt.exists.length ? 'data-exists="' + cnt.exists.map(uni => `&#${uni};`).join(' ') + '"' : '';
-                var miss = cnt.miss && cnt.miss.length ? 'data-miss="' + cnt.miss.map(uni => `&#${uni};`).join(' ') + '"' : '';
-
-                html += `<div class="item ${cnt.cnt == cnt.all ? 'full' : ''}" ${exists} ${miss}>
+                let cnt = tags[tag];
+                let exists = cnt.exists && cnt.exists.length ? 'data-exists="' + cnt.exists.map(uni => `&#${uni};`).join(' ') + '"' : '';
+                let miss = cnt.miss && cnt.miss.length ? 'data-miss="' + cnt.miss.map(uni => `&#${uni};`).join(' ') + '"' : '';
+                let cls = 'item ', style = '';
+                if (cnt.cnt == cnt.all) {
+                    cls += 'full';
+                } else if (cnt.cnt > 0 && cnt.all) {
+                    cls += 'part';
+                    style = `style="background-size: ${Math.floor(cnt.cnt*100 / cnt.all)}% 100%, 100% 100%;"`;
+                }
+                
+                html += `<div class="${cls}" ${exists} ${miss} ${style}>
                             <span class="tag">${tag}</span>
                             <span class="value"><span class="all">${cnt.all}/</span><span class="cnt">${cnt.cnt}</span></span>
                         </div>`;
@@ -633,7 +639,6 @@
                             <span class="tag">${ui('sum')}</span>
                             <span class="value"><span class="cnt">${sum}</span></span>
                         </div>`;
-
             }
 
             html += '</div>';

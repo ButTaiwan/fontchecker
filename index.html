@@ -663,7 +663,7 @@
                     }
                 }
             }
-            var limit = Math.min(maxLimit, all);
+            var limit = Math.min(maxLimit, Math.floor(all/3));
 
             return {cnt: cnt, all: all,
                 miss: miss.length < limit ? miss : null,

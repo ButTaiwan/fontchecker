@@ -369,7 +369,7 @@
                 spHtml += '</div>';
             }
 
-            for (var lang in langMeta) {
+            for (let lang in langMeta) {
                 if (langInfo.isCJK) {
                     if (lang != langInfo.lang) continue; // 只顯示 CJK 語系的樣本
                 } else {
@@ -389,28 +389,21 @@
                     spHtml += genSampleSVGs(langMeta[lang].sampleTexts[caption]);
 
                     var texts = langMeta[lang].sampleTexts[caption];
-                    // for (var text of texts) {
-                    //     try {
-                    //         let paths = null, svg = null, bounds = null;
-                    //         let fontSize = 36;
-                    //         do {        // 避免SVG路徑包含 NaN
-                    //             paths = font.getPath(text, 50, 80, fontSize);
-                    //             svg = paths.toSVG({decimalPlaces: 2, optimize: true, flipY: false});
-                    //             bounds = paths.getBoundingBox();
-                    //             fontSize -= 0.01;
-                    //         } while (svg.indexOf('NaN') >= 0 || fontSize > 35.9);
-                    //         let size = {x: Math.floor(bounds.x1-3), y: Math.floor(bounds.y1-3), w: Math.floor(bounds.x2-bounds.x1+8), h: Math.floor(bounds.y2-bounds.y1+8)}; 
-                    //         spHtml += `<svg version="1.1" viewBox="${size.x} ${size.y} ${size.w} ${size.h}" >${svg}</svg><br>`;
-                    //     } catch (e) {
-                    //         console.error('字型樣本產生錯誤:', e);
-                    //         spHtml += `<div class="sample">${text}</div>`;
-                    //     }
-                    // }
                     spHtml += '</div>';
                 }
                 //spHtml = `<h3>${fchckr.failedToMakeSamples[langInfo.isCJK ? lang : 'en']}</h3><p>${e.message}</p>`;
             }
             $('#samples').html(spHtml);
+
+            if (langInfo.lang == 'ja') {
+                $('#sample-ivs-adobe').hide();
+                $('#sample-ivs-hanyo').hide()
+                if (font.encoding.cmap.varSelectorList) {
+                    var vars = font.encoding.cmap.varSelectorList;
+                    if (vars['917762'] && vars['917762'].nonDefaultUVS.uvsMappings['37002']) $('#sample-ivs-adobe').show();      // 0xE0102 : 邊
+                    if (vars['917770'] && vars['917770'].nonDefaultUVS.uvsMappings['37002']) $('#sample-ivs-hanyo').show();      // 0xE010A : 邊                        
+                }
+            }
         }
 
         function genSampleSVGs(texts) {
@@ -581,14 +574,6 @@
                     '準一級': checkCharset('J-Kanken-LV1J'),
                     '一級': checkCharset('J-Kanken-LV1'),
                 });
-
-                $('#sample-ivs-adobe').hide();
-                $('#sample-ivs-hanyo').hide()
-                if (font.encoding.cmap.varSelectorList) {
-                    var vars = font.encoding.cmap.varSelectorList;
-                    if (vars['917762'] && vars['917762'].nonDefaultUVS.uvsMappings['37002']) $('#sample-ivs-adobe').show();      // 0xE0102 : 邊
-                    if (vars['917770'] && vars['917770'].nonDefaultUVS.uvsMappings['37002']) $('#sample-ivs-hanyo').show();      // 0xE010A : 邊                        
-                }
 
             } else if (langInfo.lang == 'ko') {
                 cntHtml += charsetBox('Unicode한글', {
@@ -787,12 +772,20 @@
                 $settingBtn.hide();
             });
             $settingBtn.on('mouseover', showSettingButton).on('click', function() {
-                // 跳出 prompt 讓使用者輸入文字
-                const userInput = prompt(ui('customText'));
+                // 取得原本的設定值
+                const oldValue = localStorage.getItem('sampleText') || '';
+                // 跳出 prompt 並帶入原本的值
+                const userInput = prompt(ui('customText'), oldValue);
                 if (userInput !== null) {
-                    // 將文字存到 localStorage
-                    localStorage.setItem('sampleText', userInput);
+                    if (userInput.trim() === '') {
+                        // 若輸入空白則清除設定值
+                        localStorage.removeItem('sampleText');
+                    } else {
+                        // 將文字存到 localStorage
+                        localStorage.setItem('sampleText', userInput);
+                    }
                     showSamples();
+                    //loadFont(font); // 重新載入字型以顯示新的樣本
                 }
             });
         });

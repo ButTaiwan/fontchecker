@@ -65,12 +65,13 @@
         #info .charset-box .item .value { text-align: right; }
         #info .charset-box .item .value .cnt { color: #229b7b; font-weight: bold; font-size: 1.5em; }
         #info .charset-box .item .value .all { color: #999; font-size: 0.8em; vertical-align: super; }
-        #info .charset-box .item.part { background: linear-gradient(to bottom, #fff, #d4f7f0), linear-gradient(to bottom, #fff, #f7d4d8); background-repeat: no-repeat; cursor: pointer; }
+        #info .charset-box .item.part { background: linear-gradient(to bottom, #fff, #d4f7f0), linear-gradient(to bottom, #fff, #f7d4d8); background-repeat: no-repeat }
+        #info .charset-box .item[data-exists], #info .charset-box .item[data-miss] { cursor: pointer }
 
         #details { position: absolute; z-index: 100; width: 440px; border-radius: 7px; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); padding: 10px; background-color: #fff; display: none; opacity: 0.9; }
         #details h3 { font-weight: bold; color: #333; margin: 0 0 10px 0; }
         #details div { font-size: 1.5em }
-        #details.exists { background-color: #d4e9f7; }
+        #details.exists { background-color: #d4f7f0; }
         #details.exists div { font-family: CustomFont; line-height: 1.5; }
         #details.miss { background-color: #f7d4d4; }
 
